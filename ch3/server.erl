@@ -14,11 +14,18 @@ stop(Name) ->
 	receive {reply, Reply} -> Reply end.
 
 call(Name, Msg) ->
-	Name ! {request, self(), Msg},
-	receive {reply, Reply} -> Reply end.
+	Ref = erlang:monitor(process, Name),
+	catch Name ! {request, {Ref, self()}, Msg},
+	receive 
+		{reply, Ref, Reply} -> 
+			erlang:demonitor(Ref),
+			Reply;
+		{'DOWN', Ref, process, _Name, _Reason} ->
+			{error, no_proc}
+	end.
 
-reply(To, Reply) ->
-	To ! {reply, Reply}.
+reply({Ref, To}, Reply) ->
+	To ! {reply, Ref, Reply}.
 
 loop(Mod, State) ->
 	receive 
