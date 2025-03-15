@@ -1,28 +1,26 @@
 -module(frequency).
 -export([start/0, stop/0, allocate/0, deallocate/1]).
--export([init/0]).
+-export([init/1, terminate/1, handle/2]).
 
-start() -> register(frequency, spawn(frequency, init, [])).
+start() -> server:start(frequency, []).
 
-init() ->
-	Frequencies = {get_frequencies(), []},
-	loop(Frequencies).
+init(_args) ->
+	{get_frequencies(), []}.		
 
 get_frequencies() -> [10, 11, 12, 13, 14, 15].
 
-loop(Frequencies) ->
-	receive 
-	{request, Pid, allocate} ->
-		{NewFrequencies, Reply} = allocate(Frequencies, Pid),
-		reply(Pid, Reply),
-		loop(NewFrequencies);
-	{request, Pid, {deallocate, Freq}} ->
-		{NewFrequencies, Reply} = deallocate(Freq, Pid),
-		reply(Pid, Reply),
-		loop(NewFrequencies);
-	{request, Pid, stop} ->
-		reply(Pid, ok)
-	end.
+
+% client functions
+stop()           -> server:stop().
+allocate()       -> server:call(frequency, {allocate, self()}).
+deallocate(Freq) -> server:call(frequency, {deallocate, Freq}).
+terminate(_Frequencies) ->
+	ok.
+
+handle({allocate, Pid}, Frequencies) ->
+	allocate(Frequencies, Pid);
+handle({deallocate, Freq}, Frequencies) ->
+	{deallocate(Frequencies, Freq), ok}.
 
 % Internal Server Functions
 allocate({[], Allocated}, _Pid) ->
@@ -33,15 +31,3 @@ allocate({[Freq|Free], Allocated}, Pid) ->
 deallocate({Free, Allocated}, Freq) ->
 	NewAllocated = lists:keydelete(Freq, 1, Allocated),
 	{[Freq|Free], NewAllocated}.
-
-% client functions
-stop()           -> call(stop).
-allocate()       -> call(allocate).
-deallocate(Freq) -> call({deallocate, Freq}).
-
-call(Message) ->
-	frequency ! {request, self(), Message},
-	receive {reply, Reply} -> Reply end.
-
-reply(Pid, Reply) ->
-	Pid ! {reply, Reply}.
