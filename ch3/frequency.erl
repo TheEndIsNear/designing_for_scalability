@@ -11,7 +11,7 @@ get_frequencies() -> [10, 11, 12, 13, 14, 15].
 
 
 % client functions
-stop()           -> server:stop().
+stop()           -> server:stop(frequency).
 allocate()       -> server:call(frequency, {allocate, self()}).
 deallocate(Freq) -> server:call(frequency, {deallocate, Freq}).
 terminate(_Frequencies) ->
@@ -24,7 +24,7 @@ handle({deallocate, Freq}, Frequencies) ->
 
 % Internal Server Functions
 allocate({[], Allocated}, _Pid) ->
-	{{[], Allocated}}, {error, no_frequencies};
+	{{[], Allocated}, {error, no_frequencies}};
 allocate({[Freq|Free], Allocated}, Pid) ->
 	{{Free, [{Freq, Pid}|Allocated]}, {ok, Freq}}.
 
