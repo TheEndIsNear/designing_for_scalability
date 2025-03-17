@@ -17,9 +17,10 @@ init([]) ->
 	{ok, selection, []}.
 
 stop() ->
-	ok.
+	gen_fsm:stop().
 
-terminate(_Arg) ->
+terminate({_Type, _Price, Paid}) ->
+	hw:return_change(Paid),
 	ok.
 
 tea() -> gen_fsm:send_event(?MODULE, {selection, tea, 100}).
